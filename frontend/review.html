@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leave Review</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    h2 { text-align: center; }
+    label { display: block; margin-top: 10px; }
+    textarea, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }
+    button { margin-top: 15px; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Leave a Review</h2>
+    <form id="reviewForm">
+      <label for="receiverId">User ID you are reviewing:</label>
+      <input type="number" id="receiverId" required>
+
+      <label for="rating">Rating (1-5):</label>
+      <select id="rating" required>
+        <option value="">Select rating</option>
+        <option value="1">1 ⭐</option>
+        <option value="2">2 ⭐⭐</option>
+        <option value="3">3 ⭐⭐⭐</option>
+        <option value="4">4 ⭐⭐⭐⭐</option>
+        <option value="5">5 ⭐⭐⭐⭐⭐</option>
+      </select>
+
+      <label for="comment">Comment:</label>
+      <textarea id="comment" rows="4" placeholder="Write your review..."></textarea>
+
+      <button type="submit">Submit Review</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("reviewForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("You must be logged in.");
+        return;
+      }
+
+      const receiverId = document.getElementById("receiverId").value;
+      const rating = document.getElementById("rating").value;
+      const comment = document.getElementById("comment").value;
+
+      try {
+        const res = await fetch("/Review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ receiverId, rating, comment })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("Review submitted successfully!");
+          window.location.href = "dashboard.html";
+        } else {
+          alert(data.error || "Failed to submit review.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error while submitting review.");
+      }
+    });
+  </script>
+</body>
+</html>

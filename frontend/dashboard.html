@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skill Swapp Dashboard</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f7fa;
+      color: #333;
+    }
+    header {
+      background: #4a90e2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: #4a90e2;
+    }
+    .sub-heading {
+      font-size: 16px;
+      margin: 10px 0 5px;
+      color: #666;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #4a90e2;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #357ab7;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      background: #f9f9f9;
+      margin: 5px 0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border-left: 4px solid #4a90e2;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Skill Swapp Dashboard</h1>
+  </header>
+  
+  <div class="container">
+    <!-- Profile Section -->
+    <div class="card">
+      <h2>My Profile</h2>
+      <p><strong>Username:</strong> <span id="username"></span></p>
+      <p><strong>Bio:</strong> <span id="bio"></span></p>
+      <p><strong>Skills:</strong> <span id="skills"></span></p>
+      <button onclick="window.location.href='profile.html'">View Profile</button>
+    </div>
+
+    <!-- Swap Requests -->
+    <div class="card">
+      <h2>Swap Requests</h2>
+      <p class="sub-heading">Sent Swaps</p>
+      <ul id="sentSwaps"></ul>
+      <p class="sub-heading">Received Swaps</p>
+      <ul id="receivedSwaps"></ul>
+      <button onclick="window.location.href='swapping.html'">Find New Swaps</button>
+    </div>
+
+    <!-- Chat -->
+    <div class="card">
+      <h2>Chat</h2>
+      <p>Stay connected with your swap partners 💬</p>
+      <button onclick="window.location.href='chatting.html'">Open Chat</button>
+    </div>
+
+    <!-- Review/Report -->
+    <div class="card">
+      <h2>Review / Report</h2>
+      <p>If you want to leave a review or report your swap partner, click below:</p>
+      <button onclick="window.location.href='review.html'">Leave Review</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("You must log in first.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Fetch user profile
+      try {
+        const res = await fetch("/user/profile", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("username").innerText = data.username;
+          document.getElementById("bio").innerText = data.bio;
+          document.getElementById("skills").innerText = data.skills;
+        } else {
+          alert(data.error || "Failed to load profile.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error while loading profile.");
+      }
+
+      // Fetch SENT swaps
+      try {
+        const res = await fetch("/swaps/sent", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const swaps = await res.json();
+        if (res.ok) {
+          const list = document.getElementById("sentSwaps");
+          swaps.forEach(swap => {
+            const li = document.createElement("li");
+            li.textContent = `You offered ${swap.skilloffer} in exchange for ${swap.skillgiven} (to user ${swap.receiverid})`;
+            list.appendChild(li);
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching sent swaps:", err);
+      }
+
+      // Fetch RECEIVED swaps
+      try {
+        const res = await fetch("/swaps/received", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const swaps = await res.json();
+        if (res.ok) {
+          const list = document.getElementById("receivedSwaps");
+          swaps.forEach(swap => {
+            const li = document.createElement("li");
+            li.textContent = `User ${swap.senderid} offered ${swap.skilloffer} in exchange for ${swap.skillgiven}`;
+            list.appendChild(li);
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching received swaps:", err);
+      }
+    });
+  </script>
+</body>
+</html>

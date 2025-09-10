@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skill Swap</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f7fa;
+      color: #333;
+    }
+    header {
+      background: #4a90e2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #4a90e2;
+    }
+    input, select, button {
+      margin: 8px 0;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #357ab7;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 10px;
+    }
+    ul li {
+      background: #f9f9f9;
+      margin: 6px 0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 4px solid #4a90e2;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Skill Swap</h1>
+  </header>
+
+  <div class="container">
+    <!-- Search Section -->
+    <div class="card">
+      <h2>Search for Skills</h2>
+      <input type="text" id="searchSkill" placeholder="Enter skill name">
+      <button id="searchBtn">Search</button>
+      <ul id="searchResults"></ul>
+    </div>
+
+    <!-- Send Swap Request -->
+    <div class="card">
+      <h2>Send Swap Request</h2>
+      <select id="swapReceiverSelect">
+        <option value="">Select user</option>
+      </select>
+      <input type="text" id="skillOffer" placeholder="Skill you offer">
+      <input type="text" id="skillWanted" placeholder="Skill you want">
+      <button id="sendSwapBtn">Send Swap Request</button>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in first.");
+      window.location.href = "login.html";
+    }
+
+    // Fetch all users to populate receiver select
+    async function loadUsers() {
+      try {
+        const res = await fetch("/user/all", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch users");
+        }
+
+        const users = await res.json();
+        console.log("Users fetched from backend:", users);
+
+        const swapSelect = document.getElementById("swapReceiverSelect");
+        swapSelect.innerHTML = '<option value="">Select user</option>'; // reset
+
+        if (!users.length) {
+          const opt = document.createElement("option");
+          opt.textContent = "No other users available";
+          opt.disabled = true;
+          swapSelect.appendChild(opt);
+          return;
+        }
+
+        users.forEach(user => {
+          const option = document.createElement("option");
+          option.value = user.id;
+          option.textContent = user.username || `User ${user.id}`;
+          swapSelect.appendChild(option);
+        });
+      } catch (err) {
+        console.error("Failed to load users:", err);
+      }
+    }
+
+    loadUsers();
+
+    // Search for skills
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+      const skill = document.getElementById("searchSkill").value.trim();
+      if (!skill) return;
+      try {
+        const res = await fetch(`/skills/search?query=${encodeURIComponent(skill)}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const results = await res.json();
+        console.log("Search results:", results);
+
+        const ul = document.getElementById("searchResults");
+        ul.innerHTML = "";
+
+        if (results.length === 0) {
+          ul.innerHTML = "<li>No results found</li>";
+        } else {
+          results.forEach(item => {
+            const li = document.createElement("li");
+            li.textContent = `${item.username} has skill: ${item.skill}`;
+            ul.appendChild(li);
+          });
+        }
+      } catch (err) {
+        console.error("Error searching skills:", err);
+      }
+    });
+
+    // Send swap request
+    document.getElementById("sendSwapBtn").addEventListener("click", async () => {
+      const receiverId = document.getElementById("swapReceiverSelect").value;
+      const skillOffer = document.getElementById("skillOffer").value.trim();
+      const skillWanted = document.getElementById("skillWanted").value.trim();
+
+      if (!receiverId || !skillOffer || !skillWanted) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/swaps/change", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            receiverid: receiverId,
+            skilloffer: skillOffer,
+            skillgiven: skillWanted
+          })
+        });
+
+        const data = await res.json();
+        console.log("Swap request response:", data);
+
+        if (res.ok) {
+          alert("Swap request sent successfully!");
+          document.getElementById("skillOffer").value = "";
+          document.getElementById("skillWanted").value = "";
+          document.getElementById("swapReceiverSelect").value = "";
+        } else {
+          alert(data.error || "Failed to send swap request.");
+        }
+      } catch (err) {
+        console.error("Error sending swap request:", err);
+      }
+    });
+  </script>
+</body>
+</html>

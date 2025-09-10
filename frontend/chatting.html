@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skill Swap - Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+      max-width: 600px;
+      margin: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .chat-header {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      font-weight: bold;
+      text-align: center;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    .message {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 6px;
+      max-width: 70%;
+    }
+    .sent {
+      background: #d1ffd1;
+      align-self: flex-end;
+    }
+    .received {
+      background: #f1f1f1;
+      align-self: flex-start;
+    }
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+    }
+    .chat-input button {
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">Chat with 
+      <select id="chatUserSelect">
+        <option value="">Select user</option>
+      </select>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input">
+      <input type="text" id="messageInput" placeholder="Type a message...">
+      <button id="sendMessageBtn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const currentUserId = JSON.parse(atob(token.split('.')[1])).id; // decode JWT to get userId
+    const userSelect = document.getElementById("chatUserSelect");
+    const chatMessages = document.getElementById("chatMessages");
+    let activeReceiverId = null;
+
+    // Load all users for dropdown
+    async function loadUsers() {
+      try {
+        const res = await fetch("/user/all", { headers: { "Authorization": `Bearer ${token}` } });
+        const users = await res.json();
+        users.forEach(u => {
+          const option = document.createElement("option");
+          option.value = u.id;
+          option.textContent = u.username;
+          userSelect.appendChild(option);
+        });
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    }
+
+    // Load chat messages with selected user
+    async function loadMessages() {
+      if (!activeReceiverId) return;
+      try {
+        const res = await fetch(`/chat/${activeReceiverId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const messages = await res.json();
+        chatMessages.innerHTML = "";
+        messages.forEach(msg => {
+          const div = document.createElement("div");
+          div.classList.add("message");
+          if (msg.senderId === currentUserId) {
+            div.classList.add("sent");
+            div.textContent = "You: " + msg.content;
+          } else {
+            div.classList.add("received");
+            div.textContent = "User: " + msg.senderId + ": " + msg.content;
+          }
+          chatMessages.appendChild(div);
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      } catch (err) {
+        console.error("Error loading messages:", err);
+      }
+    }
+
+    // Send message
+    document.getElementById("sendMessageBtn").addEventListener("click", async () => {
+      const content = document.getElementById("messageInput").value.trim();
+      if (!content || !activeReceiverId) return;
+
+      try {
+        const res = await fetch("/chat/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ receiverId: activeReceiverId, content })
+        });
+
+        if (res.ok) {
+          document.getElementById("messageInput").value = "";
+          loadMessages(); // refresh chat
+        } else {
+          alert("Failed to send message");
+        }
+      } catch (err) {
+        console.error("Error sending message:", err);
+      }
+    });
+
+    // When user changes chat partner
+    userSelect.addEventListener("change", () => {
+      activeReceiverId = userSelect.value;
+      loadMessages();
+    });
+
+    // Reload messages every 5s
+    setInterval(loadMessages, 5000);
+
+    loadUsers();
+  </script>
+</body>
+</html>
