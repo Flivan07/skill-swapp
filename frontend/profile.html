@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Profile</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f7fa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background: #4a90e2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      width: 100%;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .container {
+      background: white;
+      margin-top: 30px;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #4a90e2;
+      text-align: center;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: #4a90e2;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-top: 10px;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #357ab7;
+    }
+    .back-btn {
+      background: #777;
+    }
+    .back-btn:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Skill Swapp</h1>
+  </header>
+
+  <div class="container">
+    <h2>My Profile</h2>
+    <form id="profileForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <textarea id="bio" placeholder="Bio"></textarea>
+      <input type="text" id="skills" placeholder="Skills" required />
+      <button type="submit">Update Profile</button>
+    </form>
+    <button class="back-btn" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login first!");
+      window.location.href = "login.html";
+    }
+
+    const usernameInput = document.getElementById("username");
+    const bioInput = document.getElementById("bio");
+    const skillsInput = document.getElementById("skills");
+    const form = document.getElementById("profileForm");
+
+    // Fetch current user profile
+    async function loadProfile() {
+      try {
+        const res = await fetch("/user/profile", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const user = await res.json();
+        if (res.ok) {
+          usernameInput.value = user.username;
+          bioInput.value = user.bio || "";
+          skillsInput.value = user.skills;
+        } else {
+          alert(user.error || "Failed to load profile");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error. Try again later.");
+      }
+    }
+
+    // Update profile
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch("/user/profile", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: usernameInput.value,
+            bio: bioInput.value,
+            skills: skillsInput.value
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Profile updated!");
+        } else {
+          alert(data.error || "Update failed");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error. Try again later.");
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
